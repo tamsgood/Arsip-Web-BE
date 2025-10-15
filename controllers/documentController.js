@@ -33,6 +33,15 @@ export const getAllDocuments = async (req, res) => {
       .limit(parseInt(limit))
       .lean();
     
+    // Normalize lean results to include `id` and remove Mongo internals
+    const normalizedDocuments = documents.map((doc) => {
+      const { _id, __v, ...rest } = doc;
+      return {
+        id: typeof _id === 'object' && _id?.toString ? _id.toString() : (_id ?? doc.id),
+        ...rest
+      };
+    });
+    
     // Get total count for pagination
     const total = await Document.countDocuments(query);
     
@@ -48,7 +57,7 @@ export const getAllDocuments = async (req, res) => {
     res.json({
       success: true,
       data: {
-        documents,
+        documents: normalizedDocuments,
         pagination: {
           currentPage: parseInt(page),
           totalPages: Math.ceil(total / parseInt(limit)),
